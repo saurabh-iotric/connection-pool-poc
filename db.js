@@ -11,10 +11,10 @@ const clientOption = {
 
 function initDbConnection(){
    const db =  mongoose.createConnection('mongodb://localhost:27017/basedb',clientOption);
-   db.on("error",() => {console.log("something went wrong")})
+   /*db.on("error",() => {console.log("something went wrong")})
    db.once("open", function() {
     console.log("client MongoDB Connection ok!");
-  });
+  });*/
   require('./user')
   return db;
 

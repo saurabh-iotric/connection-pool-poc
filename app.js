@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const {userSchema} = require('./user.js')
 
+
 const db = require('./db.js')
 const useDbOptions = {
     //ensures connections to the same databases are cached
@@ -19,13 +20,23 @@ app.use(express.json())
 
 global.clientConnection = db.initDbConnection()
 
+//middleware
+app.use(async(req,res,next) => {
+    const dbConnection = await global.clientConnection;
+    const db = await dbConnection.useDb(req.body.dbName || req.params.dbName,useDbOptions);
+    req.db = db;
+    next();
+})
+function createModel(db,model,schema){
+    return db.model(model,schema)
+}
 app.post('/api/user',async(req,res) => {
    try{
-    const dbConnection = await global.clientConnection;
-    const db = await dbConnection.useDb(req.body.dbName,useDbOptions);
-   const userModel = await db.model("User",userSchema);
-
-    const newUser = await userModel.create({name:req.body.name,email:req.body.email})
+    const userModel = createModel(req.db,'User',userSchema)
+    const newUser = await req.userModel.create({name:req.body.name,email:req.body.email})
+    //deleting model to prvent memory leak
+    userModel.remove()
+    
     res.status(200).json({user:newUser})
    }
    catch(err){
@@ -34,10 +45,10 @@ app.post('/api/user',async(req,res) => {
 })
 
 app.get('/api/user/:dbName',async(req,res) => {
-    const dbConnection = await global.clientConnection;
-    const db = await dbConnection.useDb(req.params.dbName,useDbOptions);
-   const userModel = await db.model("User",userSchema);
+    const userModel = createModel(req.db,'User',userSchema)
     const users = await userModel.find()
+    //deleting model to prvent memory leak
+    userModel.remove()
     return res.status(200).json({users});
 })
 
